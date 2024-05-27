@@ -1,47 +1,77 @@
-
+import streamlit as st
 from sklearn.cluster import KMeans
 from sklearn import preprocessing
 from sklearn.mixture import GaussianMixture
 from sklearn.datasets import load_iris
-import sklearn.metrics as sm
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-dataset=load_iris()
-# print(dataset)
+# Streamlit app title
+st.title("Iris Dataset Clustering: KMeans vs GMM")
 
-X=pd.DataFrame(dataset.data)
-X.columns=['Sepal_Length','Sepal_Width','Petal_Length','Petal_Width']
-y=pd.DataFrame(dataset.target)
-y.columns=['Targets']
-# print(X)
+# Load the Iris dataset
+dataset = load_iris()
 
-plt.figure(figsize=(14,7))
-colormap=np.array(['red','lime','black'])
+# Create DataFrame for features and target
+X = pd.DataFrame(dataset.data, columns=['Sepal_Length', 'Sepal_Width', 'Petal_Length', 'Petal_Width'])
+y = pd.DataFrame(dataset.target, columns=['Targets'])
 
-# REAL PLOT
-plt.subplot(1,3,1)
-plt.scatter(X.Petal_Length,X.Petal_Width,c=colormap[y.Targets],s=40)
-plt.title('Real')
+# Display the dataset
+st.write("### Iris Dataset")
+st.write(X.head())
 
-# K-PLOT
-plt.subplot(1,3,2)
-model=KMeans(n_clusters=3)
-model.fit(X)
-predY=np.choose(model.labels_,[0,1,2]).astype(np.int64)
-plt.scatter(X.Petal_Length,X.Petal_Width,c=colormap[predY],s=40)
-plt.title('KMeans')
+# Function to create scatter plots
+def plot_clusters(X, y, predY=None, title=""):
+    colormap = np.array(['red', 'lime', 'black'])
+    plt.figure(figsize=(5, 5))
+    if predY is None:
+        plt.scatter(X.Petal_Length, X.Petal_Width, c=colormap[y.Targets], s=40)
+    else:
+        plt.scatter(X.Petal_Length, X.Petal_Width, c=colormap[predY], s=40)
+    plt.title(title)
+    st.pyplot(plt)
 
-# GMM PLOT
-scaler=preprocessing.StandardScaler()
+# Real Plot
+st.write("### Real Classification")
+plot_clusters(X, y, title='Real')
+
+# KMeans Clustering
+st.write("### KMeans Clustering")
+kmeans_model = KMeans(n_clusters=3)
+kmeans_model.fit(X)
+predY_kmeans = np.choose(kmeans_model.labels_, [0, 1, 2]).astype(np.int64)
+plot_clusters(X, y, predY=predY_kmeans, title='KMeans')
+
+# GMM Clustering
+st.write("### GMM Clustering")
+scaler = preprocessing.StandardScaler()
 scaler.fit(X)
-xsa=scaler.transform(X)
-xs=pd.DataFrame(xsa,columns=X.columns)
-gmm=GaussianMixture(n_components=3)
-gmm.fit(xs)
+X_scaled = scaler.transform(X)
+gmm_model = GaussianMixture(n_components=3)
+gmm_model.fit(X_scaled)
+predY_gmm = gmm_model.predict(X_scaled)
+plot_clusters(X, y, predY=predY_gmm, title='GMM Classification')
 
-y_cluster_gmm=gmm.predict(xs)
-plt.subplot(1,3,3)
-plt.scatter(X.Petal_Length,X.Petal_Width,c=colormap[y_cluster_gmm],s=40)
-plt.title('GMM Classification')
+# Show the plots side by side
+st.write("### Side-by-Side Comparison")
+fig, axs = plt.subplots(1, 3, figsize=(18, 5))
+colormap = np.array(['red', 'lime', 'black'])
+
+# Real Plot
+axs[0].scatter(X.Petal_Length, X.Petal_Width, c=colormap[y.Targets], s=40)
+axs[0].set_title('Real')
+
+# KMeans Plot
+axs[1].scatter(X.Petal_Length, X.Petal_Width, c=colormap[predY_kmeans], s=40)
+axs[1].set_title('KMeans')
+
+# GMM Plot
+axs[2].scatter(X.Petal_Length, X.Petal_Width, c=colormap[predY_gmm], s=40)
+axs[2].set_title('GMM Classification')
+
+for ax in axs:
+    ax.set_xlabel('Petal Length')
+    ax.set_ylabel('Petal Width')
+
+st.pyplot(fig)
